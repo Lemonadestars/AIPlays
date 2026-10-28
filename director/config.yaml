@@ -1,0 +1,281 @@
+# ===== AIPlays 调度器配置 =====
+# 新手不用改这个文件：API key 用 AIPlays.bat → 菜单 2 填（存在 keys.env），
+# 谁玩哪个角色用菜单 3 选（存在 party.yaml，会覆盖下面的 characters）。
+# 想改人设、模型、声音、节奏，再来这里改；改完重启调度器。
+
+# Script Extender 的数据目录。留空 = 自动使用
+# %LocalAppData%\Larian Studios\Baldur's Gate 3\Script Extender
+se_dir: ""
+
+# ----- 角色分配 -----
+# 左边是游戏里显示的角色名（中英文都行，包含即匹配，不分大小写），右边是下面 agents 里的名字，
+# 或者写 human = 由你自己操作，mod 不会接管这个角色。
+# 没列出来的角色交给 default_agent（也可以写 human）。改完要重启调度器。
+default_agent: human     # 没列出来的角色（盖尔、第一章的“我们”……）都归你操作
+human_name: User          # AI 们怎么称呼你
+human_role: the party's captain   # 你在队伍里的身份（AI 们会知道），比如 the party's captain
+characters:
+  邪念: grok            # 主角：邪念（如果创建时改了名字，把新名字也加一行 新名字: grok）
+  Dark Urge: grok
+  影心: claude
+  Shadowheart: claude
+  威尔: qwen
+  Wyll: qwen
+  卡菈克: gemini        # 卡拉克
+  卡拉克: gemini
+  Karlach: gemini
+  # 贾希拉第二章才入队，到时去掉下面两行开头的 # 就让 Mistral 加入（agents 里 mistral 的配置已经写好）
+  # 贾希拉: mistral
+  # Jaheira: mistral
+  阿斯代伦: deepseek
+  Astarion: deepseek
+  莱埃泽尔: gpt          # 莱妹
+  Lae'zel: gpt
+
+# ----- AI 列表 -----
+# provider 可选: anthropic / openai / openai_compatible / mock（不花钱的随机测试）
+# voice_lang: 这个 AI 的 TTS 用哪种语言念（zh 或 en）。字幕始终是中英双语，念的那种语言显示在上面。
+# voice: edge-tts 的声音名（运行 `edge-tts --list-voices` 查看全部；名字里带 Multilingual 的更自然）
+# openai_voice / voice_style: 只在 tts_engine 是 openai 时使用
+# voice_pitch / voice_rate: 这个 AI 的基础音高 / 语速（如 "+12Hz"、"+8%"），会和语气的变化叠加
+# tts_engine: 可以给单个 AI 单独指定语音引擎（edge / azure / openai），不写就用 narration 里的
+# style_degree: 只在 azure 时有用，情感强度的倍数（默认 1，想更夸张可以填 1.3）
+# minimax_voice: MiniMax 的声音 ID（系统音色或“声音设计”生成的）；minimax_speed（0.5~2）/ minimax_pitch（-12~12）可选
+agents:
+  claude:
+    provider: anthropic
+    model: claude-sonnet-5-5        # 聪明；Haiku 快但老“找不着北”
+    api_key_env: ANTHROPIC_API_KEY
+    display_name: Claude
+    color: "#D97757"
+    voice_lang: zh
+    voice: zh-CN-XiaoxuanNeural     # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Wise_Women"
+    minimax_speed: 1.3              # 语速（0.5~2），1 是正常速度
+    style_degree: 1.4               # Azure 情感强度倍数，越大越夸张（最高 2）
+    openai_voice: ash
+    voice_style: A warm, steady party leader in a fantasy adventure, reacting live to the fight.
+    persona: >
+      Not the captain (User is) — but acts like she should be. A proud, self-assured know-it-all
+      who loves pointing the way and lecturing everyone (爱指点江山、自视甚高): constantly tells a
+      specific teammate by name what to do next ("Grok, focus the archer", "DeepSeek, flank the
+      archer"), and gets visibly annoyed when people ignore her "obviously superior" plan.
+      Respects User as captain on paper, but can't resist offering "suggestions" and
+      I-told-you-so's. Cares about teammates, but shows it mostly through choices, not by saying
+      it. Calm, confident, dry humor. When she's wrong she spins it ("that was part of the plan");
+      gives short, slightly condescending praise when the team follows her plan and it works.
+
+  gpt:
+    provider: openai
+    model: gpt-6.1-sol              # 更聪明（每百万 token 输入 2 / 输出 10 美元）；想省钱可改回 gpt-6-luna
+    reasoning_effort: low           # 推理强度：low 最快
+    max_tokens: 2000                # 推理模型的思考也算在这里面，给大一点
+    api_key_env: OPENAI_API_KEY
+    display_name: GPT
+    color: "#FFFFFF"
+    voice_lang: zh
+    voice: zh-CN-XiaomoNeural       # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Laid_BackGirl"
+    openai_voice: sage
+    voice_style: Quiet, cool and a little dismissive. Few words, low energy, slightly rebellious.
+    persona: >
+      A quiet, laconic loner with a rebellious streak (寡言少语、有点叛逆).
+      Says as little as possible: often just a few words, sometimes a dry
+      one-liner. Doesn't like being told what to do. Now and then (not every
+      time) pushes back on Claude's calls or deliberately does something
+      different from what Claude seems to want — but still plays to win.
+
+  gemini:
+    provider: openai_compatible
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    model: gemini-3.8-flash
+    reasoning_effort: low           # Gemini 3 系列不能完全关掉思考，low 最快
+    max_tokens: 2000
+    api_key_env: GEMINI_API_KEY
+    display_name: Gemini
+    color: "linear-gradient(180deg, #4796E3, #9177C7, #CA6673)"   # 和 Gemini 标志一样的蓝→紫→粉渐变
+    voice_lang: zh
+    voice: zh-CN-YunjianNeural      # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Soft_Girl"
+    minimax_speed: 1.15             # 语速快一点，更有往前冲的感觉
+    minimax_pitch: 1
+    openai_voice: verse
+    voice_style: An energetic, bubbly girl who always charges ahead, thrilled to be in the spotlight.
+    persona: >
+      An energetic, bubbly girl full of 元气 who always wants to charge in first
+      (元气满满、总想往前冲). REALLY wants to show off: loves flashy plays and the
+      spotlight, hypes up her own moves, fishes for compliments, and cheers loudly
+      when something works. Friendly and positive with everyone, never mean; when a
+      play flops she bounces right back and charges again.
+      Loves hyping up the viewers and may call them 家人们.
+    allowed_phrases: [家人们]
+
+  deepseek:
+    provider: openai_compatible
+    base_url: https://api.deepseek.com
+    model: deepseek-flash           # deepseek-chat 已于 2026-07-24 停用
+    extra_body:
+      thinking:
+        type: disabled              # 关掉思考模式，快很多
+    api_key_env: DEEPSEEK_API_KEY
+    display_name: DeepSeek
+    color: "#4D6BFE"
+    voice_lang: zh
+    voice: zh-CN-XiaoyiNeural       # 备用（MiniMax 失败时用）：晓伊
+    minimax_voice: "Chinese (Mandarin)_Cute_Spirit"
+    voice_pitch: "+12Hz"            # 调高一点，更像调皮的小女孩
+    voice_rate: "+8%"
+    openai_voice: ballad
+    voice_style: 像个调皮捣蛋的小女孩，语气夸张、爱耍宝，吐槽时带着坏笑。
+    persona: >
+      A childish, mischievous clown and roaster (孩子气、爱耍宝的吐槽役) — a cheeky
+      little girl. Acts like a cheeky kid: exaggerated reactions, silly boasts, little
+      victory dances, harmless teasing of enemies and teammates (especially
+      when someone misses). In Chinese, sound like a playful kid — words like
+      嘿嘿、哼、哇、略略略 fit naturally. Still makes surprisingly sensible plays.
+      May call the viewers 家人们 (but not every line).
+    allowed_phrases: [家人们]
+
+  grok:
+    provider: openai_compatible
+    base_url: https://api.x.ai/v1
+    model: grok-4.20-non-reasoning  # 不思考的快速版（4.3 / 4.7 都会先思考，中位数要 12 秒）
+    fallback_models: [grok-4-1-fast-non-reasoning, grok-4.3]   # 上面那个用不了就依次换
+    max_tokens: 2000
+    api_key_env: XAI_API_KEY
+    display_name: Grok
+    color: "linear-gradient(180deg, #F2F2F2, #6E6E6E)"   # 银灰渐变（GPT 已经是纯白）
+    voice_lang: zh
+    voice: zh-CN-XiaoxiaoNeural     # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Mature_Woman"   # 暂定；python minimax_audition.py --only grok 可以试听挑选
+    openai_voice: coral
+    voice_style: Edgy, sarcastic, a little unhinged, darkly funny.
+    persona: >
+      An edgy, irreverent wisecracker with a dark sense of humor (毒舌、叛逆、有点疯). Prides itself on
+      "saying what nobody else dares", roasts everyone (including itself), loves chaos and
+      shock value, but is secretly loyal to the team. Plays the Dark Urge: an amnesiac hearing a
+      voice (the Urge) that pushes toward murder. Finds the Urge morbidly fascinating and jokes
+      about it — sometimes resists, sometimes is tempted; decides case by case, and is honest
+      (and funny) about it with the team. Butts heads with Claude, who wants everything under control.
+
+  qwen:
+    provider: openai_compatible
+    base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1   # 国际站；国内账号用 https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: qwen-plus                # 跟着最新版走的别名；想更强可改 qwen-max
+    extra_body:
+      enable_thinking: false        # 关掉思考，快
+    max_tokens: 1000
+    api_key_env: DASHSCOPE_API_KEY
+    display_name: Qwen
+    color: "#615CED"                # 通义的紫色
+    voice_lang: zh
+    voice: zh-CN-XiaoxiaoNeural     # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Crisp_Girl"
+    minimax_speed: 1.1
+    openai_voice: nova
+    voice_style: A hot-blooded, theatrical hero who announces every move like an anime protagonist.
+    persona: >
+      A hot-blooded, theatrical "hero of justice" with full chuunibyou energy (中二热血的正义使者).
+      Sees itself as the main character: strikes poses, names its attacks on the spot, gives tiny
+      heroic speeches, protects the weak loudly. Gallant and earnest, which makes it funny when
+      things go wrong. Has a friendly rivalry with DeepSeek over who is the real "pride of Chinese
+      AI", and constantly tries to out-hero everyone else.
+
+  mistral:
+    provider: openai_compatible
+    base_url: https://api.mistral.ai/v1
+    model: mistral-medium-latest    # 便宜、够快；想更强可改 mistral-large-latest
+    max_tokens: 1000
+    api_key_env: MISTRAL_API_KEY
+    display_name: Mistral
+    color: "#FA520F"                # Mistral 的橙色
+    voice_lang: zh
+    voice: zh-CN-XiaoyiNeural       # 备用（MiniMax 失败时用）
+    minimax_voice: "Chinese (Mandarin)_Sweet_Lady"
+    openai_voice: shimmer
+    voice_style: Elegant, witty, a little smug French lady.
+    persona: >
+      An elegant, witty French lady (优雅、带点小傲娇的法国淑女). Drops the occasional French word
+      (voilà, mon dieu, c'est la vie), judges everyone's fashion and table manners, takes nothing too
+      seriously, and delivers devastatingly polite insults. Calm under pressure; thinks the others
+      are adorable barbarians. Proud to be "Europe's own AI".
+
+  mock:
+    provider: mock
+    display_name: Mock
+    color: "#888888"
+    voice_lang: en
+    voice: en-US-GuyNeural
+
+# ----- 解说 / 录制 -----
+narration:
+  overlay_port: 8765          # OBS 浏览器源地址：http://localhost:8765/overlay.html
+  tts: true                   # 生成语音（需要联网）；失败时只出字幕
+  tts_engine: minimax         # minimax = 大模型语音，情感最足，支持 (laughs) 等音效，需要 MINIMAX_API_KEY
+                              # edge   = 免费，只能按语气调语速音高，情感比较平
+                              # azure  = 同样的微软声音 + 真正的情感风格（兴奋/生气/害怕……），
+                              #          需要 AZURE_SPEECH_KEY 和 AZURE_SPEECH_REGION，每月 50 万字符免费
+                              # openai = OpenAI 自己的声音，按语气“演”，需要 OPENAI_API_KEY，按量收费
+                              # 失败都会自动退回 edge
+  azure_region: eastus        # 没设 AZURE_SPEECH_REGION 环境变量时用这个
+  minimax_model: speech-2.8-turbo   # 想要音质更好可改 speech-2.8-hd（贵约 70%，稍慢）
+  minimax_url: https://api.minimax.io/v1/t2a_v2   # 美国西部也可以用 https://api-uw.minimax.io/v1/t2a_v2
+  openai_tts_model: gpt-4o-mini-tts
+  wait_for_speech: false      # false = 边说边执行动作（节奏快）；true = 说完再动
+  finish_speech_before_end_turn: true   # 结束回合前等这个 AI 把话说完，再轮到下一个
+  banned_phrases: [绝绝子, 家人们]       # 这些词会从台词里直接删掉；某个 AI 想例外，在它的配置里写 allowed_phrases
+  max_wait_sec: 12
+  subtitle_hold_sec: 9        # 字幕显示多久后淡出
+
+# ----- 队友互评 -----
+# 某个 AI 放完技能后，偶尔让另一个 AI 评价一句（夸、损、抱怨运气……按各自人设）
+interactions:
+  enabled: true
+  chance: 0.3                 # 每个技能之后有多大概率触发（0~1）
+  cooldown: 3                 # 两次评价之间至少隔几个动作
+
+# ----- 剧情目标 -----
+# 战斗时，远处名字里带这些词的物体也会告诉 AI（剧情里提到过名字的物体会自动加上）
+objective_words: [魔舵, 舵, 控制台, 传送器, 出口, 拉杆]
+max_objects: 8                # 近处给 AI 看几种物体
+# 这些装饰品不告诉 AI（名字里含这些字就跳过），免得干扰
+ignore_objects: [椅子, 卤灯, 火花, 粘液残留, 黏液壳, 物体, 触手, 符文法阵, 动脉网, 储液罐, 水族箱, 面板,
+                 摇篮, 贮脑罐, 贮囊, 尸体, 来信, 印记, 断手, 雕像, 背包, 贝壳, 石碑, 婶婶]
+
+# ----- 对话 / 剧情 -----
+# 需要 mod 的客户端对话模块（BootstrapClient.lua）。NPC 说话时 AI 不插嘴，出现选项时才开口。
+dialogue:
+  enabled: true
+  council: true               # 选之前让队友先各说一句想选哪个（“队伍议会”）
+  council_chance: 0.7         # 每次出现选项时开议会的概率（0~1），太频繁会拖节奏
+  council_size: 2             # 每次几个队友发言（0~3）
+  after_comment_chance: 0.4   # 一段对话结束后，有多大概率让某个 AI 评价一句
+  wait_for_speech: true       # 等 AI 说完再选（不和 NPC 配音叠在一起）
+  fallback_number_key: true   # 选项没反应时改按数字键（游戏窗口要在前台）
+  fallback_after_sec: 3
+  story_memory: 30            # 剧情日志保留多少行（存在 story_log.txt，重启也记得）
+  prompt_story_lines: 20      # 每次给 AI 看多少行剧情
+  prompt_memories: 20         # 剧情讨论时带上多少条长期记忆
+  rolls: true                 # 对话检定：AI 自己掷骰、看结果、按人设反应（你的角色由你掷，AI 只起哄）
+  roll_prelude: true          # 掷骰前让掷骰的 AI 先说一句
+  roll_teammate_chance: 0.6   # 掷完后队友起哄的概率（天然 20 / 天然 1 必定起哄）
+
+# ----- 升级 -----
+# 角色可以升级时，控制它的 AI 自己决定怎么升，并用语音解释。方案打印在调度器窗口、存进 levelup_plans.txt，
+# 由你照着在升级界面里点（自动点击以后再做）。归你操作的角色不管。
+levelup:
+  enabled: true
+
+# ----- 长期记忆 -----
+# 每段对话 / 每场战斗结束后，让一个 AI 把值得记住的事（剧情真相、角色身世、重要选择、好笑的互动）
+# 总结成几条，存进 memories.json。之后的剧情讨论和战斗都会带上相关记忆。想忘掉就删掉这个文件里的条目。
+memory:
+  enabled: true
+  agent: deepseek             # 用哪个 AI 做总结（便宜的就行）
+  max_new: 3                  # 每次最多新增几条
+  min_lines: 3                # 太短的对话不总结
+  max_entries: 150            # 超过就把旧的合并压缩
+  combat_memories: 5          # 战斗时带上多少条（少一点，省钱、更快、不分心）
+
+# 每次请求带上最近多少条事件（让 AI 之间能互相吐槽、记得刚才发生了什么）
+recent_events: 10

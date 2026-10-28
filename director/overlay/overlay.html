@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIPlays Narration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* OBS 浏览器源建议尺寸 1920x1080，背景保持透明 */
+  :root {
+    --plate: rgba(20, 15, 11, 1);   /* 字幕底板：最后一个数是不透明度，1 = 完全不透明 */
+    --ink: #f1e8d4;
+    --ink-soft: #b9ac94;
+    --gilt: #c9a45c;
+    --agent: #c9a45c;     /* 每条字幕由 AI 的颜色覆盖：发光和名字用的纯色 */
+    --agent-bar: #c9a45c; /* 光带本身：可以是纯色，也可以是渐变 */
+  }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  body { height: 100vh; display: flex; align-items: flex-end; justify-content: center; }
+
+  .plate {
+    position: relative;
+    max-width: 1180px;
+    width: calc(100% - 64px);
+    margin-bottom: 64px;
+    padding: 22px 34px 24px 46px;
+    background: var(--plate);
+    border: 1px solid rgba(201, 164, 92, 0.45);
+    border-radius: 6px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    color: var(--ink);
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 380ms ease, transform 380ms ease;
+  }
+  .plate.show { opacity: 1; transform: translateY(0); }
+
+  /* 左侧这道 AI 专属颜色的光带，是整个字幕唯一的装饰 */
+  .plate::before {
+    content: "";
+    position: absolute;
+    left: 18px; top: 20px; bottom: 20px;
+    width: 4px;
+    border-radius: 2px;
+    background: var(--agent-bar);
+    box-shadow: 0 0 14px var(--agent);
+  }
+
+  .who {
+    margin: 0 0 10px;
+    font: italic 500 24px/1.2 "Spectral", Georgia, serif;
+    color: var(--ink-soft);
+  }
+  .who b { font-style: normal; font-weight: 600; color: var(--agent); }
+  .who b.gradient { color: transparent; background-image: var(--agent-name); -webkit-background-clip: text; background-clip: text; }
+  .move { color: var(--gilt); font-style: normal; margin-left: 14px; }
+
+  .primary { margin: 0; color: var(--ink); }
+  .secondary { margin: 10px 0 0; color: var(--ink-soft); }
+
+  .en { font-family: "Spectral", Georgia, serif; font-weight: 500; }
+  .zh { font-family: "Noto Serif SC", "Songti SC", serif; font-weight: 500; }
+
+  .primary.en { font-size: 36px; line-height: 1.32; }
+  .primary.zh { font-size: 36px; line-height: 1.5; }
+  .secondary.en { font-size: 25px; line-height: 1.35; }
+  .secondary.zh { font-size: 25px; line-height: 1.55; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="plate" id="plate" aria-live="polite">
+    <p class="who" id="who"></p>
+    <p class="primary" id="primary"></p>
+    <p class="secondary" id="secondary"></p>
+  </div>
+
+<script>
+  const plate = document.getElementById("plate");
+  const whoEl = document.getElementById("who");
+  const primaryEl = document.getElementById("primary");
+  const secondaryEl = document.getElementById("secondary");
+  let lastId = null;
+  let hideTimer = null;
+
+  // Projectile_GuidingBolt -> Guiding Bolt
+  function prettySpell(id) {
+    if (!id) return "";
+    const core = id.includes("_") ? id.slice(id.indexOf("_") + 1) : id;
+    return core.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+  }
+
+  function render(d) {
+    // color 可以是 "#RRGGBB"，也可以是 "linear-gradient(...)"（比如 Gemini 的渐变）
+    const color = d.color || "#c9a45c";
+    const isGradient = color.includes("gradient(");
+    const stops = color.match(/#[0-9a-fA-F]{3,8}/g) || ["#c9a45c"];
+    const root = document.documentElement.style;
+    root.setProperty("--agent-bar", color);
+    root.setProperty("--agent", isGradient ? stops[Math.floor(stops.length / 2)] : color);
+    root.setProperty("--agent-name", isGradient ? color.replace(/\(\s*\d+deg/, "(90deg") : "none");
+
+    whoEl.textContent = "";
+    const name = document.createElement("b");
+    if (isGradient) name.className = "gradient";
+    name.textContent = d.agent || "AI";
+    whoEl.append(name, ` as ${d.character || "?"}`);
+    if (d.spell) {
+      const mv = document.createElement("span");
+      mv.className = "move";
+      mv.textContent = prettySpell(d.spell) + (d.target ? `  ›  ${d.target}` : "");
+      whoEl.append(mv);
+    }
+
+    const zhFirst = d.primary_lang === "zh";
+    primaryEl.className = "primary " + (zhFirst ? "zh" : "en");
+    secondaryEl.className = "secondary " + (zhFirst ? "en" : "zh");
+    primaryEl.lang = zhFirst ? "zh-CN" : "en";
+    secondaryEl.lang = zhFirst ? "en" : "zh-CN";
+    primaryEl.textContent = zhFirst ? d.zh : d.en;
+    secondaryEl.textContent = zhFirst ? d.en : d.zh;
+
+    plate.classList.add("show");
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => plate.classList.remove("show"), (d.hold || 9) * 1000);
+
+    if (d.audio) {
+      const a = new Audio(d.audio);
+      a.play().catch(() => {}); // 普通浏览器可能拦截自动播放；OBS 里不会
+    }
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch("current.json?t=" + Date.now(), { cache: "no-store" });
+      if (r.ok) {
+        const d = await r.json();
+        if (lastId === null) lastId = d.id;          // 打开页面时不重播旧字幕
+        else if (d.id && d.id !== lastId) { lastId = d.id; render(d); }
+      }
+    } catch (e) { /* 调度器还没启动，继续等 */ }
+    setTimeout(poll, 300);
+  }
+  poll();
+</script>
+</body>
+</html>
